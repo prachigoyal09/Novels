@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novel Library</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .filter-section { margin-bottom: 20px; }
+        .sort-section { margin-bottom: 20px; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <h1>Novel Library</h1>
+
+    <div class="filter-section">
+        <h2>Filter by Release Year</h2>
+        <input type="number" id="minYear" placeholder="Min Year">
+        <input type="number" id="maxYear" placeholder="Max Year">
+        <button id="applyFilters">Apply Filters</button>
+    </div>
+
+    <div class="sort-section">
+        <h2>Sort by Price</h2>
+        <button id="sortAsc">Price Ascending</button>
+        <button id="sortDesc">Price Descending</button>
+    </div>
+
+    <table id="novelTable">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Price</th>
+                <th>Release Year</th>
+                <th>Genre</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        // Firebase Configuration (Replace with your own)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const novelTableBody = document.querySelector('#novelTable tbody');
+        const minYearInput = document.getElementById('minYear');
+        const maxYearInput = document.getElementById('maxYear');
+        const applyFiltersButton = document.getElementById('applyFilters');
+        const sortAscButton = document.getElementById('sortAsc');
+        const sortDescButton = document.getElementById('sortDesc');
+
+        let novels = [];
+
+        function fetchNovels(query) {
+            novelTableBody.innerHTML = ''; // Clear table
+            query.get().then((querySnapshot) => {
+                novels = []; // Reset novels array
+                querySnapshot.forEach((doc) => {
+                    const novel = doc.data();
+                    novels.push(novel);
+                    const row = `
+                        <tr>
+                            <td>${novel.title}</td>
+                            <td>${novel.author}</td>
+                            <td>${novel.price}</td>
+                            <td>${novel.releaseYear}</td>
+                            <td>${novel.genre}</td>
+                        </tr>
+                    `;
+                    novelTableBody.innerHTML += row;
+                });
+            }).catch((error) => {
+                console.error("Error getting documents: ", error);
+            });
+        }
+
+        function applyYearFilters() {
+            let query = db.collection('novels');
+            const minYear = parseInt(minYearInput.value);
+            const maxYear = parseInt(maxYearInput.value);
+
+            if (!isNaN(minYear)) {
+                query = query.where('releaseYear', '>=', minYear);
+            }
+            if (!isNaN(maxYear)) {
+                query = query.where('releaseYear', '<=', maxYear);
+            }
+            fetchNovels(query);
+        }
+
+        function sortByPrice(order) {
+            let query = db.collection('novels');
+            query = query.orderBy('price', order);
+            fetchNovels(query);
+        }
+
+        function initialize() {
+            fetchNovels(db.collection('novels')); // Initial fetch
+        }
+
+        applyFiltersButton.addEventListener('click', applyYearFilters);
+        sortAscButton.addEventListener('click', () => sortByPrice('asc'));
+        sortDescButton.addEventListener('click', () => sortByPrice('desc'));
+
+        initialize();
+    </script>
+</body>
+</html>
